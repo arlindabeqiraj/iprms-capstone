@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mlflow/
+mlruns/
+*.egg-info/
+dist/
+build/
+.DS_Store
+runs/run_*/
