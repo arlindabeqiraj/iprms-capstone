@@ -1,0 +1,12 @@
+manifest.yaml
+
+bundle_id: PRBUNDLE003
+description: Budget Exceeded scenario. Vendor is approved and pricing is valid, but the requested amount exceeds the available budget.
+expected_decision: BLOCKED
+requisition_file: requisition.json
+budget_file: budget_snapshot.csv
+vendor_file: approved_vendors.csv
+catalogue_file: catalogue_pricing.csv
+policy_file: approval_policy.yaml
+cost_center_file: cost_center_mapping.csv
+created_at: "2026-06-11T11:00:00"

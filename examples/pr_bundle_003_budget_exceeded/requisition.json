@@ -1,0 +1,41 @@
+{
+  "run_id": "sample_run_prbundle003",
+  "pr_id": "PR003",
+  "header": {
+    "pr_number": "PR003",
+    "request_date": "2026-06-11T11:00:00",
+    "required_by": "2026-06-22T17:00:00",
+    "requester": "Mark Johnson",
+    "department": "IT",
+    "cost_center": "CC100",
+    "justification": "Laptop replacement for the entire department."
+  },
+  "line_items": [
+    {
+      "line_number": 1,
+      "item_name": "Dell Latitude Laptop",
+      "quantity": 20,
+      "unit_price": 900,
+      "total_price": 18000,
+      "cost_center": "CC100",
+      "requested_vendor": "Dell",
+      "confidence": 0.97,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[0]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": false,
+      "ambiguity_reason": null
+    }
+  ],
+  "total_value": 18000,
+  "extraction_method": "SYNTHETIC_FALLBACK",
+  "overall_confidence": 0.97,
+  "aggregation_notes": [
+    "Synthetic PR bundle used for budget exceeded test scenario."
+  ]
+}

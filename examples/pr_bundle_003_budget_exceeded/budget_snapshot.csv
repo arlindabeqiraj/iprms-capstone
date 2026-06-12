@@ -1,0 +1,3 @@
+cost_center,department,gl_account,available_budget,currency,budget_period,period_cap,capex_required
+CC100,IT,GL-IT-HARDWARE,10000,EUR,2026-Q2,15000,false
+
