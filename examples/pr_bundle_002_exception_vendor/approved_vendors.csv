@@ -1,0 +1,5 @@
+vendor_id,vendor_name,category,is_approved,is_preferred,risk_level
+V001,Dell,IT Hardware,true,true,low
+V002,Lenovo,IT Hardware,true,false,low
+V003,HP,IT Hardware,true,false,low
+V999,Random Tech Supplier,IT Hardware,false,false,high

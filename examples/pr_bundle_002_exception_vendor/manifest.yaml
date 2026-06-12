@@ -1,0 +1,10 @@
+bundle_id: PRBUNDLE002
+description: Vendor Exception scenario. Budget is available and item data is valid, but the selected vendor is not preferred, so the PR requires buyer review.
+expected_decision: REQUIRES_APPROVAL
+requisition_file: requisition.json
+budget_file: budget_snapshot.csv
+vendor_file: approved_vendors.csv
+catalogue_file: catalogue_pricing.csv
+policy_file: approval_policy.yaml
+cost_center_file: cost_center_mapping.csv
+created_at: "2026-06-11T10:00:00"
