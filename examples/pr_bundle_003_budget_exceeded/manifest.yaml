@@ -1,5 +1,3 @@
-manifest.yaml
-
 bundle_id: PRBUNDLE003
 description: Budget Exceeded scenario. Vendor is approved and pricing is valid, but the requested amount exceeds the available budget.
 expected_decision: BLOCKED
