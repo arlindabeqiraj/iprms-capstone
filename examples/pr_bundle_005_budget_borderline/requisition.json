@@ -1,0 +1,41 @@
+{
+  "run_id": "sample_run_prbundle005",
+  "pr_id": "PR005",
+  "header": {
+    "pr_number": "PR005",
+    "request_date": "2026-06-11T15:00:00",
+    "required_by": "2026-06-25T17:00:00",
+    "requester": "Mike Johnson",
+    "department": "IT",
+    "cost_center": "CC100",
+    "justification": "Laptop upgrades for the development team to improve productivity."
+  },
+  "line_items": [
+    {
+      "line_number": 1,
+      "item_name": "Dell Latitude Laptop",
+      "quantity": 10,
+      "unit_price": 920,
+      "total_price": 9200,
+      "cost_center": "CC100",
+      "requested_vendor": "Dell",
+      "confidence": 0.97,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[0]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": false,
+      "ambiguity_reason": null
+    }
+  ],
+  "total_value": 9200,
+  "extraction_method": "SYNTHETIC_FALLBACK",
+  "overall_confidence": 0.97,
+  "aggregation_notes": [
+    "Synthetic PR bundle for budget borderline test scenario. 9200 > 90% of 10000."
+  ]
+}

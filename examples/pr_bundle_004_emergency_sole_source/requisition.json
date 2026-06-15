@@ -1,0 +1,41 @@
+{
+  "run_id": "sample_run_prbundle004",
+  "pr_id": "PR004",
+  "header": {
+    "pr_number": "PR004",
+    "request_date": "2026-06-11T14:00:00",
+    "required_by": "2026-06-12T08:00:00",
+    "requester": "Sarah Connor",
+    "department": "IT",
+    "cost_center": "CC100",
+    "justification": "Emergency sole-source procurement - critical server failure requires immediate replacement. No alternative supplier available within required timeframe. Standard bidding process cannot be followed due to operational emergency."
+  },
+  "line_items": [
+    {
+      "line_number": 1,
+      "item_name": "Dell PowerEdge Server R750",
+      "quantity": 1,
+      "unit_price": 8500,
+      "total_price": 8500,
+      "cost_center": "CC100",
+      "requested_vendor": "Emergency Tech Solutions",
+      "confidence": 0.97,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[0]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": false,
+      "ambiguity_reason": null
+    }
+  ],
+  "total_value": 8500,
+  "extraction_method": "SYNTHETIC_FALLBACK",
+  "overall_confidence": 0.97,
+  "aggregation_notes": [
+    "Synthetic PR bundle for emergency sole-source test scenario."
+  ]
+}

@@ -1,0 +1,4 @@
+vendor_id,vendor_name,category,is_preferred,contract_expiry
+V001,Logitech,IT Hardware,true,2027-12-31
+V002,Dell,IT Hardware,true,2027-12-31
+V003,HP,IT Hardware,true,2027-06-30

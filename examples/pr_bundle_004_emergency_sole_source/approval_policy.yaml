@@ -1,0 +1,26 @@
+procurement_scenario: EMERGENCY
+currency: EUR
+
+approval_thresholds:
+  low_value:
+    max_amount: 1000
+    approver_role: Team Lead
+  medium_value:
+    min_amount: 1001
+    max_amount: 5000
+    approver_role: Department Manager
+  high_value:
+    min_amount: 5001
+    approver_role: Finance Director
+
+sourcing_rules:
+  require_approved_vendor: true
+  require_justification_for_non_preferred_vendor: true
+  bid_required_above: 5000
+
+auto_po_rules:
+  allow_auto_po: false
+  max_auto_po_amount: 0
+  require_no_exceptions: true
+  require_budget_available: true
+  require_approved_vendor: true

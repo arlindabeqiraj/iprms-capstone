@@ -1,0 +1,10 @@
+bundle_id: PRBUNDLE005
+description: Budget borderline scenario. Requested amount exceeds 90% of available budget triggering WARNING finding. Vendor is approved and pricing is valid.
+expected_decision: REQUIRES_APPROVAL
+requisition_file: requisition.json
+budget_file: budget_snapshot.csv
+vendor_file: approved_vendors.csv
+catalogue_file: catalogue_pricing.csv
+policy_file: approval_policy.yaml
+cost_center_file: cost_center_mapping.csv
+created_at: "2026-06-11T15:00:00"
