@@ -1,0 +1,41 @@
+{
+  "run_id": "sample_run_prbundle001",
+  "pr_id": "PR001",
+  "header": {
+    "pr_number": "PR001",
+    "request_date": "2026-06-11T09:00:00",
+    "required_by": "2026-06-20T17:00:00",
+    "requester": "John Doe",
+    "department": "IT",
+    "cost_center": "CC100",
+    "justification": "New laptops required for the development team."
+  },
+  "line_items": [
+    {
+      "line_number": 1,
+      "item_name": "Dell Latitude Laptop",
+      "quantity": 5,
+      "unit_price": 900,
+      "total_price": 4500,
+      "cost_center": "CC100",
+      "requested_vendor": "Dell",
+      "confidence": 0.98,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[0]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": false,
+      "ambiguity_reason": null
+    }
+  ],
+  "total_value": 4500,
+  "extraction_method": "SYNTHETIC_FALLBACK",
+  "overall_confidence": 0.98,
+  "aggregation_notes": [
+    "Synthetic PR bundle used for clean auto PO test scenario."
+  ]
+}
