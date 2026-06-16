@@ -10,3 +10,6 @@ dist/
 build/
 .DS_Store
 runs/run_*/
+
+runs/*
+!runs/.gitkeep
