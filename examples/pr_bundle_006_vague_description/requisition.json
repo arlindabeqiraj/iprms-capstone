@@ -1,0 +1,61 @@
+{
+  "run_id": "sample_run_prbundle006",
+  "pr_id": "PR006",
+  "header": {
+    "pr_number": "PR006",
+    "request_date": "2026-06-11T09:00:00",
+    "required_by": "2026-06-20T17:00:00",
+    "requester": "Tom Brady",
+    "department": "IT",
+    "cost_center": "CC100",
+    "justification": "Various office items needed."
+  },
+  "line_items": [
+    {
+      "line_number": 1,
+      "item_name": "stuff",
+      "quantity": 10,
+      "unit_price": 50,
+      "total_price": 500,
+      "cost_center": "CC100",
+      "requested_vendor": "Dell",
+      "confidence": 0.45,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[0]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": true,
+      "ambiguity_reason": "Item description 'stuff' is too vague for pricing validation."
+    },
+    {
+      "line_number": 2,
+      "item_name": "misc items",
+      "quantity": 5,
+      "unit_price": 100,
+      "total_price": 500,
+      "cost_center": "CC100",
+      "requested_vendor": "Dell",
+      "confidence": 0.4,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[1]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": true,
+      "ambiguity_reason": "Item description 'misc items' is too vague — cannot validate pricing or vendor."
+    }
+  ],
+  "total_value": 1000,
+  "extraction_method": "SYNTHETIC_FALLBACK",
+  "overall_confidence": 0.43,
+  "aggregation_notes": [
+    "Vague item descriptions detected. Buyer clarification required before processing."
+  ]
+}

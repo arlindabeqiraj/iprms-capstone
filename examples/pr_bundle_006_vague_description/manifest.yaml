@@ -1,0 +1,10 @@
+bundle_id: PRBUNDLE006
+description: Item description too vague for pricing — buyer clarification request. Agent B flags ambiguous items with low confidence.
+expected_decision: MANUAL_REVIEW
+requisition_file: requisition.json
+budget_file: budget_snapshot.csv
+vendor_file: approved_vendors.csv
+catalogue_file: catalogue_pricing.csv
+policy_file: approval_policy.yaml
+cost_center_file: cost_center_mapping.csv
+created_at: "2026-06-11T09:00:00"

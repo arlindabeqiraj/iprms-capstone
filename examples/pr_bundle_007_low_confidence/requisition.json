@@ -1,0 +1,61 @@
+{
+  "run_id": "sample_run_prbundle007",
+  "pr_id": "PR007",
+  "header": {
+    "pr_number": "PR007",
+    "request_date": "2026-06-11T09:00:00",
+    "required_by": "2026-06-20T17:00:00",
+    "requester": "Alice Brown",
+    "department": "IT",
+    "cost_center": "CC100",
+    "justification": "Equipment for new team members."
+  },
+  "line_items": [
+    {
+      "line_number": 1,
+      "item_name": "IT",
+      "quantity": 3,
+      "unit_price": 800,
+      "total_price": 2400,
+      "cost_center": "CC100",
+      "requested_vendor": "Dell",
+      "confidence": 0.55,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[0]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": true,
+      "ambiguity_reason": "Item name 'IT' is too short and ambiguous — cannot determine product type."
+    },
+    {
+      "line_number": 2,
+      "item_name": "accessories",
+      "quantity": 3,
+      "unit_price": 150,
+      "total_price": 450,
+      "cost_center": "CC100",
+      "requested_vendor": "",
+      "confidence": 0.5,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[1]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": true,
+      "ambiguity_reason": "Requested vendor is missing and item description is vague."
+    }
+  ],
+  "total_value": 2850,
+  "extraction_method": "SYNTHETIC_FALLBACK",
+  "overall_confidence": 0.53,
+  "aggregation_notes": [
+    "Low confidence extraction detected. Manual review required before processing."
+  ]
+}
