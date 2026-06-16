@@ -39,3 +39,18 @@ def test_agent_a_builds_evidence_index_for_bundle_002():
     assert context_packet.evidence_index[0].item_name == "Dell Latitude Laptop"
     assert context_packet.evidence_index[0].source_file == "requisition.json"
     assert context_packet.evidence_index[0].page_number == 1
+
+
+def test_agent_a_uses_external_shared_run_id():
+    bundle_path = Path("examples/pr_bundle_002_exception_vendor")
+    shared_run_id = "TEST_SHARED_RUN_ID_AGENT_A"
+
+    context_packet = run_intake(
+        bundle_path=bundle_path,
+        run_id=shared_run_id,
+    )
+
+    assert context_packet.run_id == shared_run_id
+
+    output_path = Path("runs") / shared_run_id / "context_packet.json"
+    assert output_path.exists()

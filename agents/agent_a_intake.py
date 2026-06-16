@@ -5,7 +5,35 @@ from models.context_models import ContextPacket, LineItemRef
 from models.shared_models import BundleManifest, PRType, RiskFlag
 from services.file_loader import load_pr_bundle
 from services.output_writer import write_context_packet
-from services.run_manager import create_run_dir
+
+
+RUNS_DIR = Path("runs")
+
+
+def _ensure_run_dir(run_id: str) -> Path:
+    run_path = RUNS_DIR / run_id
+    run_path.mkdir(parents=True, exist_ok=True)
+    return run_path
+
+
+def _safe_audit_start(audit_logger: Any, agent_name: str, input_summary: str) -> None:
+    if audit_logger is not None and hasattr(audit_logger, "log_agent_start"):
+        audit_logger.log_agent_start(agent_name, input_summary)
+
+
+def _safe_audit_end(audit_logger: Any, agent_name: str, output_summary: str) -> None:
+    if audit_logger is not None and hasattr(audit_logger, "log_agent_end"):
+        audit_logger.log_agent_end(agent_name, output_summary)
+
+
+def _safe_metrics_start(metrics_tracker: Any, agent_name: str) -> None:
+    if metrics_tracker is not None and hasattr(metrics_tracker, "start_agent"):
+        metrics_tracker.start_agent(agent_name)
+
+
+def _safe_metrics_end(metrics_tracker: Any, agent_name: str) -> None:
+    if metrics_tracker is not None and hasattr(metrics_tracker, "end_agent"):
+        metrics_tracker.end_agent(agent_name)
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -86,6 +114,9 @@ def _get_item_name(item: dict[str, Any]) -> str:
 def _get_item_total(item: dict[str, Any]) -> float:
     if "total_price" in item:
         return _to_float(item.get("total_price"))
+
+    if "total_value" in item:
+        return _to_float(item.get("total_value"))
 
     quantity = _to_float(item.get("quantity"))
     unit_price = _to_float(item.get("unit_price"))
@@ -268,63 +299,110 @@ def _validate_required_requisition_fields(requisition: dict[str, Any]) -> None:
             raise ValueError(f"Missing required field in requisition: {field}")
 
 
-def run_intake(bundle_path: str | Path) -> ContextPacket:
+def run_intake(
+    bundle_path: str | Path,
+    run_id: str | None = None,
+    audit_logger: Any = None,
+    metrics_tracker: Any = None,
+) -> ContextPacket:
+    """
+    Agent A — Intake & Context.
+
+    Pipeline-compatible behavior:
+    - If run_id is provided by run_pipeline.py, Agent A uses that shared run_id.
+    - If run_id is not provided, Agent A falls back to manifest.bundle_id.
+      This keeps standalone tests and standalone execution working.
+
+    Responsibilities:
+    - Load PR Bundle
+    - Validate manifest and required files through file_loader
+    - Read requisition basic fields
+    - Classify PR type
+    - Build evidence index
+    - Detect early risk flags
+    - Build ContextPacket
+    - Write context_packet.json into runs/{run_id}/
+    """
+    agent_name = "Agent A"
     bundle_path = Path(bundle_path)
 
     if not bundle_path.exists():
         raise FileNotFoundError(f"Bundle folder not found: {bundle_path}")
 
-    bundle_data = load_pr_bundle(bundle_path)
-
-    manifest = BundleManifest.model_validate(bundle_data["manifest"])
-    requisition = bundle_data["requisition"]
-
-    _validate_required_requisition_fields(requisition)
-
-    run_id = manifest.bundle_id
-
-    create_run_dir(run_id)
-
-    requester = _get_requisition_field(requisition, "requester")
-    department = _get_requisition_field(requisition, "department")
-    cost_center = _get_requisition_field(requisition, "cost_center")
-
-    pr_type = _classify_pr_type(requisition)
-    total_estimated_value = _calculate_total_estimated_value(requisition)
-
-    evidence_index = _build_evidence_index(
-        requisition=requisition,
-        requisition_file=manifest.requisition_file,
+    _safe_audit_start(
+        audit_logger,
+        agent_name,
+        f"Starting intake for bundle_path={bundle_path}",
     )
+    _safe_metrics_start(metrics_tracker, agent_name)
 
-    risk_flags = _detect_risk_flags(
-        requisition=requisition,
-        bundle_data=bundle_data,
-        pr_type=pr_type,
-        total_estimated_value=total_estimated_value,
-    )
+    try:
+        bundle_data = load_pr_bundle(bundle_path)
 
-    context_packet = ContextPacket(
-        run_id=run_id,
-        pr_type=pr_type,
-        requester=requester,
-        department=department,
-        cost_center=cost_center,
-        total_estimated_value=total_estimated_value,
-        bundle_files=[
-            manifest.requisition_file,
-            manifest.budget_file,
-            manifest.vendor_file,
-            manifest.catalogue_file,
-            manifest.policy_file,
-            manifest.cost_center_file,
-        ],
-        evidence_index=evidence_index,
-        risk_flags=risk_flags,
-        risk_score=_calculate_risk_score(risk_flags),
-        classification_confidence=1.0,
-    )
+        manifest = BundleManifest.model_validate(bundle_data["manifest"])
+        requisition = bundle_data["requisition"]
 
-    write_context_packet(run_id, context_packet)
+        _validate_required_requisition_fields(requisition)
 
-    return context_packet
+        if run_id is None:
+            run_id = manifest.bundle_id
+
+        _ensure_run_dir(run_id)
+
+        requester = _get_requisition_field(requisition, "requester")
+        department = _get_requisition_field(requisition, "department")
+        cost_center = _get_requisition_field(requisition, "cost_center")
+
+        pr_type = _classify_pr_type(requisition)
+        total_estimated_value = _calculate_total_estimated_value(requisition)
+
+        evidence_index = _build_evidence_index(
+            requisition=requisition,
+            requisition_file=manifest.requisition_file,
+        )
+
+        risk_flags = _detect_risk_flags(
+            requisition=requisition,
+            bundle_data=bundle_data,
+            pr_type=pr_type,
+            total_estimated_value=total_estimated_value,
+        )
+
+        context_packet = ContextPacket(
+            run_id=run_id,
+            pr_type=pr_type,
+            requester=requester,
+            department=department,
+            cost_center=cost_center,
+            total_estimated_value=total_estimated_value,
+            bundle_files=[
+                manifest.requisition_file,
+                manifest.budget_file,
+                manifest.vendor_file,
+                manifest.catalogue_file,
+                manifest.policy_file,
+                manifest.cost_center_file,
+            ],
+            evidence_index=evidence_index,
+            risk_flags=risk_flags,
+            risk_score=_calculate_risk_score(risk_flags),
+            classification_confidence=1.0,
+        )
+
+        write_context_packet(run_id, context_packet)
+
+        _safe_audit_end(
+            audit_logger,
+            agent_name,
+            (
+                f"Completed Agent A. run_id={run_id}, "
+                f"pr_type={context_packet.pr_type.value}, "
+                f"total_estimated_value={context_packet.total_estimated_value}, "
+                f"risk_flags={[flag.value for flag in context_packet.risk_flags]}"
+            ),
+        )
+
+        return context_packet
+
+    finally:
+        _safe_metrics_end(metrics_tracker, agent_name)
