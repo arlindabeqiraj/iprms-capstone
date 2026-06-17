@@ -16,6 +16,7 @@ Architecture:
 
 import json
 import logging
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -749,7 +750,7 @@ def _build_findings(
 
     return (
         findings,
-        list(set(policy_references)),
+        list(dict.fromkeys(policy_references)),
         approval_ok,
         bid_ok,
         sole_source_ok,
@@ -866,7 +867,10 @@ def run_agent_e(
     # 3. Audit trail 
     logger.info(f"[Agent E] Running LangGraph ReAct agent for {extracted.pr_id}")
 
-    llm   = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+    llm = ChatGroq(
+         model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+         temperature=0,
+        )
     tools = [
         check_approval_authority,
         check_bid_threshold,
@@ -953,7 +957,12 @@ def run_agent_e(
 
     # ── End logging + metrics ────────────────────────────────
     # ── End logging + metrics ────────────────────────────────
-    metrics_tracker.end_agent("agent_e", confidence=0.90)
+    confidence = (
+         1.0  if overall_compliance == ComplianceStatus.COMPLIANT
+         else 0.95 if overall_compliance == ComplianceStatus.PARTIAL
+         else 0.90
+        )
+    metrics_tracker.end_agent("agent_e", confidence=confidence)
     audit_logger.log_agent_end(
         output_summary=(
             f"overall_compliance={overall_compliance.value} | "
