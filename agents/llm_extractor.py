@@ -1,5 +1,7 @@
 import json
 import os
+import base64
+from pathlib import Path
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -14,8 +16,7 @@ def extract_pr_from_text(text: str, run_id: str, source_file: str) -> dict:
     """
 
     api_key = os.getenv("GROQ_API_KEY")
-    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
-
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     if not api_key:
         raise ValueError("GROQ_API_KEY not found in environment.")
 
@@ -120,3 +121,134 @@ Requisition text:
         return json.loads(content)
     except Exception as exc:
         raise ValueError(f"LLM returned invalid JSON: {exc}\n\n{content}") from exc
+    
+
+def assess_item_ambiguity(item: dict) -> dict:
+    """
+    Uses Groq LLM to decide whether a line item description is too vague
+    for reliable procurement pricing.
+    """
+
+    api_key = os.getenv("GROQ_API_KEY")
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not found in environment.")
+
+    client = Groq(api_key=api_key)
+
+    prompt = f"""
+You are Agent B in a procurement automation system.
+
+Assess whether this purchase requisition line item is specific enough for reliable procurement pricing.
+
+Return ONLY valid JSON in this exact format:
+
+{{
+  "is_ambiguous": false,
+  "ambiguity_reason": null,
+  "confidence_adjustment": 0.95
+}}
+
+Rules:
+- If the item is too generic, set is_ambiguous=true.
+- Examples of vague items: "laptop", "monitor", "software", "equipment", "device", "accessory", "cable", "hardware", "office supplies".
+- A specific item includes enough detail for pricing, such as brand, model, size, type, specs, or catalogue-identifiable name.
+- confidence_adjustment must be between 0 and 1.
+- If ambiguous, explain briefly in ambiguity_reason.
+- Return JSON only. No markdown.
+
+Line item:
+{json.dumps(item, indent=2)}
+"""
+
+    response = client.chat.completions.create(
+        model=model,
+        temperature=0,
+        messages=[
+            {
+                "role": "system",
+                "content": "You assess procurement item ambiguity and return strict JSON.",
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+    )
+
+    content = response.choices[0].message.content
+
+    try:
+        return json.loads(content)
+    except Exception as exc:
+        raise ValueError(f"LLM returned invalid ambiguity JSON: {exc}\n\n{content}") from exc  
+    
+
+def extract_text_from_page_image(
+    image_path: Path,
+    page_number: int,
+) -> str:
+    """
+    OCR-style fallback using Groq vision.
+
+    Used when a PDF page has no reliable selectable text.
+    Converts a rendered PDF page image into plain text.
+    """
+
+    api_key = os.getenv("GROQ_API_KEY")
+    vision_model = os.getenv(
+        "GROQ_VISION_MODEL",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+    )
+
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not found in environment.")
+
+    client = Groq(api_key=api_key)
+
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
+
+    response = client.chat.completions.create(
+        model=vision_model,
+        temperature=0,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an OCR assistant for procurement documents. "
+                    "Read the image and return only the visible text. "
+                    "Do not summarize. Do not add explanations."
+                ),
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Extract all readable text from this purchase "
+                            f"requisition page. Page number: {page_number}. "
+                            "Return plain text only."
+                        ),
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{encoded_image}"
+                        },
+                    },
+                ],
+            },
+        ],
+    )
+
+    content = response.choices[0].message.content
+
+    if not content or not content.strip():
+        raise ValueError(
+            f"Groq vision OCR returned empty text for page {page_number}."
+        )
+
+    return content.strip()
