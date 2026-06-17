@@ -9,6 +9,16 @@ from services.output_writer import write_context_packet
 
 RUNS_DIR = Path("runs")
 
+_RISK_FLAG_WEIGHTS = {
+    "HIGH_VALUE_SOLE_SOURCE": 0.50,
+    "MISSING_JUSTIFICATION": 0.40,
+    "SPLIT_ORDER_RISK": 0.35,
+    "BUDGET_NEAR_LIMIT": 0.25,
+    "NON_PREFERRED_VENDOR": 0.20,
+}
+
+_SPLIT_ORDER_DUPLICATE_THRESHOLD = 2
+
 
 def _ensure_run_dir(run_id: str) -> Path:
     run_path = RUNS_DIR / run_id
@@ -111,6 +121,10 @@ def _get_item_name(item: dict[str, Any]) -> str:
     )
 
 
+def _normalize_item_name(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
 def _get_item_total(item: dict[str, Any]) -> float:
     if "total_price" in item:
         return _to_float(item.get("total_price"))
@@ -134,35 +148,72 @@ def _calculate_total_estimated_value(requisition: dict[str, Any]) -> float:
     return round(total, 2)
 
 
-def _classify_pr_type(requisition: dict[str, Any]) -> PRType:
-    explicit_type = str(requisition.get("pr_type", "")).strip().upper()
+def _classify_pr_type(requisition: dict[str, Any]) -> tuple[PRType, float]:
+    """
+    Classify PR type and return confidence.
+
+    Confidence logic:
+    - 1.00 if PR type is explicitly provided in input
+    - 0.85 if PR type is inferred from keywords
+    - 0.60 if no signal exists and STANDARD is used as default
+    """
+    explicit_type = str(
+        requisition.get("pr_type")
+        or requisition.get("type")
+        or ""
+    ).strip().upper()
+
+    explicit_type_aliases = {
+        "STANDARD": PRType.STANDARD,
+        "EMERGENCY": PRType.EMERGENCY,
+        "URGENT": PRType.EMERGENCY,
+        "SOLE_SOURCE": PRType.SOLE_SOURCE,
+        "SOLE-SOURCE": PRType.SOLE_SOURCE,
+        "SOLESOURCE": PRType.SOLE_SOURCE,
+        "SINGLE_SOURCE": PRType.SOLE_SOURCE,
+        "SINGLE-SOURCE": PRType.SOLE_SOURCE,
+        "BLANKET_ORDER": PRType.BLANKET_ORDER,
+        "BLANKET": PRType.BLANKET_ORDER,
+    }
+
+    if explicit_type in explicit_type_aliases:
+        return explicit_type_aliases[explicit_type], 1.00
 
     if explicit_type in PRType.__members__:
-        return PRType[explicit_type]
+        return PRType[explicit_type], 1.00
 
     header = _get_header(requisition)
+    searchable_text_parts = [
+        str(requisition.get("justification", "")),
+        str(requisition.get("description", "")),
+        str(requisition.get("notes", "")),
+        str(header.get("justification", "")),
+        str(header.get("description", "")),
+        str(header.get("notes", "")),
+    ]
 
-    combined_text = " ".join(
-        [
-            str(requisition.get("justification", "")),
-            str(requisition.get("description", "")),
-            str(requisition.get("notes", "")),
-            str(header.get("justification", "")),
-            str(header.get("description", "")),
-            str(header.get("notes", "")),
-        ]
-    ).lower()
+    for item in _get_requisition_items(requisition):
+        searchable_text_parts.append(str(item.get("item_name", "")))
+        searchable_text_parts.append(str(item.get("description", "")))
+        searchable_text_parts.append(str(item.get("justification", "")))
 
-    if "emergency" in combined_text or "urgent" in combined_text:
-        return PRType.EMERGENCY
+    searchable_text = " ".join(searchable_text_parts).lower()
 
-    if "sole" in combined_text or "single source" in combined_text:
-        return PRType.SOLE_SOURCE
+    if "emergency" in searchable_text or "urgent" in searchable_text:
+        return PRType.EMERGENCY, 0.85
 
-    if "blanket" in combined_text:
-        return PRType.BLANKET_ORDER
+    if (
+        "sole source" in searchable_text
+        or "single source" in searchable_text
+        or "sole-source" in searchable_text
+        or "single-source" in searchable_text
+    ):
+        return PRType.SOLE_SOURCE, 0.85
 
-    return PRType.STANDARD
+    if "blanket" in searchable_text:
+        return PRType.BLANKET_ORDER, 0.85
+
+    return PRType.STANDARD, 0.60
 
 
 def _get_evidence_page_number(item: dict[str, Any]) -> int:
@@ -230,6 +281,38 @@ def _get_available_budget_for_cost_center(
     return 0.0
 
 
+def _detect_split_order_risk(requisition: dict[str, Any]) -> bool:
+    """
+    Detect split-order pattern inside the same PR.
+
+    Current rule:
+    - if the same item name appears at least 2 times, flag SPLIT_ORDER_RISK
+    """
+    items = _get_requisition_items(requisition)
+
+    if not items:
+        return False
+
+    item_counts: dict[str, int] = {}
+
+    for item in items:
+        item_name = _normalize_item_name(
+            item.get("item_name")
+            or item.get("description")
+            or item.get("name")
+        )
+
+        if not item_name:
+            continue
+
+        item_counts[item_name] = item_counts.get(item_name, 0) + 1
+
+    return any(
+        count >= _SPLIT_ORDER_DUPLICATE_THRESHOLD
+        for count in item_counts.values()
+    )
+
+
 def _detect_risk_flags(
     requisition: dict[str, Any],
     bundle_data: dict[str, Any],
@@ -267,6 +350,9 @@ def _detect_risk_flags(
         if not justification:
             _add_risk_flag(flags, RiskFlag.MISSING_JUSTIFICATION)
 
+    if _detect_split_order_risk(requisition):
+        _add_risk_flag(flags, RiskFlag.SPLIT_ORDER_RISK)
+
     cost_center = _get_requisition_field(requisition, "cost_center")
     available_budget = _get_available_budget_for_cost_center(
         bundle_data.get("budget_snapshot", []),
@@ -282,11 +368,66 @@ def _detect_risk_flags(
     return flags
 
 
+def _risk_flag_key(flag: Any) -> str:
+    if hasattr(flag, "value"):
+        return str(flag.value)
+
+    return str(flag)
+
+
 def _calculate_risk_score(risk_flags: list[RiskFlag]) -> float:
+    """
+    Calculate weighted risk score.
+
+    The old implementation counted every flag equally.
+    The new implementation gives each risk flag its own business weight.
+    """
     if not risk_flags:
         return 0.0
 
-    return min(round(len(risk_flags) * 0.25, 2), 1.0)
+    score = 0.0
+
+    for flag in risk_flags:
+        key = _risk_flag_key(flag)
+        score += _RISK_FLAG_WEIGHTS.get(key, 0.10)
+
+    return min(round(score, 2), 1.0)
+
+
+def _build_bundle_files(manifest: BundleManifest) -> list[str]:
+    """
+    Build clean bundle_files list without None or empty values.
+
+    This prevents downstream agents from receiving invalid file names.
+    """
+    candidate_files = [
+        getattr(manifest, "requisition_file", None),
+        getattr(manifest, "budget_file", None),
+        getattr(manifest, "vendor_file", None),
+        getattr(manifest, "catalogue_file", None),
+        getattr(manifest, "policy_file", None),
+        getattr(manifest, "cost_center_file", None),
+    ]
+
+    bundle_files: list[str] = []
+    seen: set[str] = set()
+
+    for file_name in candidate_files:
+        if file_name is None:
+            continue
+
+        clean_name = str(file_name).strip()
+
+        if not clean_name:
+            continue
+
+        if clean_name in seen:
+            continue
+
+        seen.add(clean_name)
+        bundle_files.append(clean_name)
+
+    return bundle_files
 
 
 def _validate_required_requisition_fields(requisition: dict[str, Any]) -> None:
@@ -306,20 +447,21 @@ def run_intake(
     metrics_tracker: Any = None,
 ) -> ContextPacket:
     """
-    Agent A — Intake & Context.
+    Agent A - Intake & Context.
 
     Pipeline-compatible behavior:
     - If run_id is provided by run_pipeline.py, Agent A uses that shared run_id.
     - If run_id is not provided, Agent A falls back to manifest.bundle_id.
-      This keeps standalone tests and standalone execution working.
 
     Responsibilities:
     - Load PR Bundle
-    - Validate manifest and required files through file_loader
+    - Validate manifest and required requisition fields
     - Read requisition basic fields
     - Classify PR type
+    - Calculate dynamic classification confidence
     - Build evidence index
     - Detect early risk flags
+    - Calculate weighted risk score
     - Build ContextPacket
     - Write context_packet.json into runs/{run_id}/
     """
@@ -353,7 +495,7 @@ def run_intake(
         department = _get_requisition_field(requisition, "department")
         cost_center = _get_requisition_field(requisition, "cost_center")
 
-        pr_type = _classify_pr_type(requisition)
+        pr_type, classification_confidence = _classify_pr_type(requisition)
         total_estimated_value = _calculate_total_estimated_value(requisition)
 
         evidence_index = _build_evidence_index(
@@ -368,6 +510,9 @@ def run_intake(
             total_estimated_value=total_estimated_value,
         )
 
+        risk_score = _calculate_risk_score(risk_flags)
+        bundle_files = _build_bundle_files(manifest)
+
         context_packet = ContextPacket(
             run_id=run_id,
             pr_type=pr_type,
@@ -375,18 +520,11 @@ def run_intake(
             department=department,
             cost_center=cost_center,
             total_estimated_value=total_estimated_value,
-            bundle_files=[
-                manifest.requisition_file,
-                manifest.budget_file,
-                manifest.vendor_file,
-                manifest.catalogue_file,
-                manifest.policy_file,
-                manifest.cost_center_file,
-            ],
+            bundle_files=bundle_files,
             evidence_index=evidence_index,
             risk_flags=risk_flags,
-            risk_score=_calculate_risk_score(risk_flags),
-            classification_confidence=1.0,
+            risk_score=risk_score,
+            classification_confidence=classification_confidence,
         )
 
         write_context_packet(run_id, context_packet)
@@ -397,7 +535,9 @@ def run_intake(
             (
                 f"Completed Agent A. run_id={run_id}, "
                 f"pr_type={context_packet.pr_type.value}, "
+                f"classification_confidence={context_packet.classification_confidence}, "
                 f"total_estimated_value={context_packet.total_estimated_value}, "
+                f"risk_score={context_packet.risk_score}, "
                 f"risk_flags={[flag.value for flag in context_packet.risk_flags]}"
             ),
         )
