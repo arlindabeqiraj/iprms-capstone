@@ -24,3 +24,7 @@ auto_po_rules:
   require_no_exceptions: true
   require_budget_available: true
   require_approved_vendor: true
+
+pricing_rules:
+  variance_warning_pct: 10.0
+  variance_exception_pct: 25.0

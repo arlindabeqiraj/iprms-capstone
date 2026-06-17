@@ -12,3 +12,7 @@ rules:
   require_budget_available: true
   require_catalogue_match: true
   small_consumables_auto_approve: true
+
+pricing_rules:
+  variance_warning_pct: 10.0
+  variance_exception_pct: 25.0
