@@ -27,6 +27,8 @@ class LineItem(BaseModel):
     unit_price: float = Field(ge=0.0)
     total_price: float = Field(ge=0.0)
     cost_center: str
+    gl_account: str = "UNKNOWN"
+    currency: str = "EUR"
     requested_vendor: Optional[str] = None
     confidence: float = Field(ge=0.0, le=1.0)
     evidence_pointers: list[EvidencePointer] = Field(default_factory=list)

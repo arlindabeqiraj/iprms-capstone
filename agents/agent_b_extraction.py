@@ -5,7 +5,7 @@ import fitz
 
 from agents.llm_extractor import extract_pr_from_text
 from models import ExtractedPR
-from services.file_loader import load_manifest, load_requisition
+from services.file_loader import load_manifest, load_requisition, load_pr_bundle
 from services.output_writer import write_extracted_pr
 from services.run_manager import (
     create_run_dir,
@@ -105,22 +105,25 @@ def _load_json_requisition(run_id: str, bundle_path: str) -> ExtractedPR:
     requisition_data = load_requisition(bundle_path)
     requisition_data["run_id"] = run_id
 
+    bundle_data = load_pr_bundle(bundle_path)
+    budget_rows = bundle_data.get("budget_snapshot", [])
+    approval_policy = bundle_data.get("approval_policy", {})
+
+    default_currency = approval_policy.get("currency", "EUR")
+
+    for item in requisition_data.get("line_items", []):
+        item.setdefault("gl_account", "UNKNOWN")
+        item.setdefault("currency", default_currency)
+
+        item_cost_center = item.get("cost_center")
+
+        for row in budget_rows:
+            if row.get("cost_center") == item_cost_center:
+                item["gl_account"] = row.get("gl_account", item["gl_account"])
+                item["currency"] = row.get("currency", item["currency"])
+                break
+
     extracted_pr = ExtractedPR.model_validate(requisition_data)
-    return _validate_extracted_pr(extracted_pr)
-
-
-def _load_pdf_requisition(run_id: str, requisition_path: Path) -> ExtractedPR:
-    pdf_text = _extract_pdf_text(requisition_path)
-
-    llm_data = extract_pr_from_text(
-        text=pdf_text,
-        run_id=run_id,
-        source_file=requisition_path.name,
-    )
-
-    llm_data["run_id"] = run_id
-
-    extracted_pr = ExtractedPR.model_validate(llm_data)
     return _validate_extracted_pr(extracted_pr)
 
 

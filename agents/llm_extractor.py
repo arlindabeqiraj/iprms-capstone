@@ -53,6 +53,8 @@ The JSON MUST match this exact schema:
       "unit_price": 900,
       "total_price": 4500,
       "cost_center": "CC100",
+      "gl_account": "IT-HARDWARE",
+      "currency": "EUR",
       "requested_vendor": "Dell",
       "confidence": 0.95,
       "evidence_pointers": [
@@ -79,7 +81,9 @@ Important rules:
 - Return JSON only.
 - Use "item_name", never "item".
 - Use "total_price", never "total_cost".
-- Every line item must include line_number, item_name, quantity, unit_price, total_price, cost_center, requested_vendor, confidence, evidence_pointers, is_ambiguous, and ambiguity_reason.
+- Every line item must include line_number, item_name, quantity, unit_price, total_price, cost_center, gl_account, currency, requested_vendor, confidence, evidence_pointers, is_ambiguous, and ambiguity_reason.
+- If gl_account is missing from the source text, use "UNKNOWN".
+- If currency is missing from the source text, use "EUR".
 - Calculate total_price as quantity * unit_price.
 - Calculate total_value as the sum of all line item total_price values.
 - If a field is missing, use a reasonable placeholder and lower confidence.
