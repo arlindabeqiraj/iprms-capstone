@@ -1,0 +1,29 @@
+approval_thresholds:
+  auto_approve:
+    max_amount: 5000
+  manager_approval:
+    min_amount: 5000
+    max_amount: 10000
+  high_value:
+    min_amount: 10000
+
+anomaly_rules:
+  same_department_window_days: 7
+  same_department_weekly_threshold: 10000
+  expected_prior_prs:
+    - pr_id: PR009-A
+      department: IT
+      cost_center: CC100
+      request_date: "2026-06-10T09:00:00"
+      total_value: 4200
+    - pr_id: PR009-B
+      department: IT
+      cost_center: CC100
+      request_date: "2026-06-11T09:00:00"
+      total_value: 3900
+
+rules:
+  require_approved_vendor: true
+  require_budget_available: true
+  require_catalogue_match: true
+  flag_same_department_weekly_aggregation: true

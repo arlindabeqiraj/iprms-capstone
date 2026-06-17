@@ -1,0 +1,43 @@
+{
+  "run_id": "placeholder",
+  "pr_id": "PR009",
+  "header": {
+    "pr_number": "PR009",
+    "request_date": "2026-06-12T10:00:00",
+    "required_by": "2026-06-24T17:00:00",
+    "requester": "Michael Brown",
+    "department": "IT",
+    "cost_center": "CC100",
+    "justification": "Additional laptops requested by the IT department within the same procurement week."
+  },
+  "line_items": [
+    {
+      "line_number": 1,
+      "item_name": "Dell Latitude Laptop",
+      "quantity": 3,
+      "unit_price": 900.0,
+      "total_price": 2700.0,
+      "cost_center": "CC100",
+      "requested_vendor": "Dell",
+      "confidence": 0.97,
+      "evidence_pointers": [
+        {
+          "source_file": "requisition.json",
+          "page_number": 1,
+          "field_name": "line_items[0]",
+          "bounding_box": null
+        }
+      ],
+      "is_ambiguous": false,
+      "ambiguity_reason": null
+    }
+  ],
+  "total_value": 2700.0,
+  "extraction_method": "SYNTHETIC_FALLBACK",
+  "overall_confidence": 0.97,
+  "aggregation_notes": [
+    "This PR is individually clean.",
+    "Scenario represents the third IT department PR in one week.",
+    "Expected downstream anomaly logic should aggregate same-department weekly PR totals."
+  ]
+}

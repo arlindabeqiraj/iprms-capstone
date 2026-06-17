@@ -1,0 +1,10 @@
+bundle_id: PRBUNDLE009
+description: Three PRs from same department in one week summing above approval threshold. Current PR looks clean individually but should trigger aggregation/anomaly review.
+expected_decision: REQUIRES_APPROVAL
+requisition_file: requisition.json
+budget_file: budget_snapshot.csv
+vendor_file: approved_vendors.csv
+catalogue_file: catalogue_pricing.csv
+policy_file: approval_policy.yaml
+cost_center_file: cost_center_mapping.csv
+created_at: "2026-06-12T10:00:00"
