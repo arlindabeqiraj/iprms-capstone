@@ -1,0 +1,4 @@
+vendor_name,is_approved,is_preferred
+Dell,true,true
+HP,true,false
+Random Tech Supplier,false,false

@@ -1,0 +1,2 @@
+cost_center,gl_account,available_budget,period_cap,budget_period,currency,capex_required
+CC100,IT-CONSUMABLES,5000,1000,2026-Q3,EUR,false

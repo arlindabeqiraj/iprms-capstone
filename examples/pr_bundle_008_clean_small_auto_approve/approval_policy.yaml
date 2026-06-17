@@ -1,0 +1,14 @@
+approval_thresholds:
+  auto_approve:
+    max_amount: 500
+  manager_approval:
+    min_amount: 500
+    max_amount: 5000
+  high_value:
+    min_amount: 10000
+
+rules:
+  require_approved_vendor: true
+  require_budget_available: true
+  require_catalogue_match: true
+  small_consumables_auto_approve: true
