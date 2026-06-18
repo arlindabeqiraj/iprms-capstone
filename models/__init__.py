@@ -24,3 +24,7 @@ from models.decision_models import (
     ApprovalRoute, ApprovalPacket,
     POLineItem, PODraft, Metrics
 )
+from models.sole_source_models import (
+    JustificationQuality, BidStatus, SoleSourceRiskLevel,
+    SoleSourceLineCheck, SoleSourceCheck
+)

@@ -1,8 +1,10 @@
 from services.run_manager import save_artifact, save_markdown
 from models import (
     ContextPacket, ExtractedPR, BudgetCheck, VendorMatch,
-    ComplianceFindings, ApprovalPacket, PODraft, ExceptionsReport
+    ComplianceFindings, ApprovalPacket, PODraft, ExceptionsReport,SoleSourceCheck
 )
+
+
 
 
 def write_context_packet(run_id: str, packet: ContextPacket) -> None:
@@ -31,3 +33,7 @@ def write_approval_packet(run_id: str, packet: ApprovalPacket) -> None:
 
 def write_po_draft(run_id: str, po: PODraft) -> None:
     save_artifact(run_id, 'po_draft.json', po.model_dump(mode='json'))
+
+
+def write_sole_source_check(run_id: str, check: SoleSourceCheck) -> None:
+    save_artifact(run_id, 'sole_source_check.json', check.model_dump(mode='json'))

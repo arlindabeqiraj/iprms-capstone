@@ -413,6 +413,65 @@ def run_optional_agent_e(
         return state
 
 
+# ── Agent F — Stretch Goal: Sole-Source & Bid Threshold ──────
+def run_optional_agent_f(
+    run_id: str,
+    bundle_data: dict[str, Any],
+    audit_logger: PipelineAuditLogger,
+    metrics_tracker: PipelineMetricsTracker,
+) -> Any | None:
+    """
+    Run Agent F only if it exists.
+
+    Stretch goal — Standalone Sole-Source & Bid Threshold Agent.
+    Runs after Agent E, before Agent G and Agent H.
+    If Agent F is not present, the pipeline does not fail.
+    """
+    agent_name = "Agent F"
+
+    run_agent_f = optional_import_callable(
+        module_name="agents.agent_f_sole_source",
+        possible_function_names=["run_agent_f", "run_agent_7", "run"],
+    )
+
+    if run_agent_f is None:
+        reason = (
+            "Agent F was skipped because agents.agent_f_sole_source "
+            "was not found. Expected one of: run_agent_f, run_agent_7, run."
+        )
+        print(f"SKIP Agent F - {reason}")
+        audit_logger.log_agent_skip(agent_name, reason)
+        metrics_tracker.skip_agent(agent_name)
+        return None
+
+    print("Running Agent F - Sole-Source & Bid Threshold...")
+    audit_logger.log_agent_start(
+        agent_name,
+        "Starting Agent F sole-source and bid threshold analysis.",
+    )
+    metrics_tracker.start_agent(agent_name)
+
+    try:
+        sole_source_check = run_agent_f(
+            run_id=run_id,
+            bundle_data=bundle_data,
+            audit_logger=audit_logger,
+            metrics_tracker=metrics_tracker,
+        )
+
+        audit_logger.log_agent_end(agent_name, "Agent F completed successfully.")
+        metrics_tracker.end_agent(agent_name)
+
+        print("OK Agent F completed")
+        return sole_source_check
+
+    except Exception as exc:
+        audit_logger.log_agent_error(agent_name, str(exc))
+        metrics_tracker.end_agent(agent_name, confidence=0.0)
+        print(f"ERROR Agent F failed: {exc}")
+        return None
+
+
 def run_pipeline(
     bundle_path: str | Path,
     run_id: str | None = None,
@@ -430,6 +489,8 @@ def run_pipeline(
     - Agent C: Budget Validation        -> budget_check.json
     - Agent D: Vendor Matching          -> vendor_match.json
     - Agent E: Compliance and Policy    -> optional
+    - Agent F: Sole-Source & Bid        -> sole_source_check.json (stretch goal)
+    - Agent G: Split-Order & Anomaly    -> anomaly_check.json (stretch goal, Intern 2)
     - Agent H: Final orchestration      -> exceptions.md, approval_packet.json,
       po_draft.json, audit_log.md, audit_log.json, metrics.json
     """
@@ -504,6 +565,16 @@ def run_pipeline(
         metrics_tracker=metrics_tracker,
     )
 
+    # ── Agent F (stretch goal, optional) ─────────────────────
+    sole_source_check = run_optional_agent_f(
+        run_id=shared_run_id,
+        bundle_data=bundle_data,
+        audit_logger=audit_logger,
+        metrics_tracker=metrics_tracker,
+    )
+
+    
+
     print("Running Agent H - Final Orchestration...")
     agent_h_result = run_agent_h(
         run_id=shared_run_id,
@@ -536,6 +607,11 @@ def run_pipeline(
     else:
         print("  Agent E skipped - policy artifact not produced")
 
+    if sole_source_check is not None:
+        print("  sole_source_check.json   -> Agent F (stretch goal)")
+    else:
+        print("  Agent F skipped - sole_source_check not produced")
+
     print("  exceptions.md            -> Agent H")
     print("  approval_packet.json     -> Agent H")
     print("  po_draft.json            -> Agent H")
@@ -554,6 +630,7 @@ def run_pipeline(
         "context_packet": context_packet,
         "budget_check": budget_check,
         "compliance": compliance,
+        "sole_source_check": sole_source_check,
         "agent_h_result": agent_h_result,
         "context_packet_path": str(run_path / "context_packet.json"),
         "extracted_pr_path": str(run_path / "extracted_pr.json"),
@@ -635,6 +712,7 @@ def main() -> None:
     context_packet = result["context_packet"]
     budget_check = result["budget_check"]
     compliance = result["compliance"]
+    sole_source_check = result["sole_source_check"]
     agent_h_result = result["agent_h_result"]
 
     budget_status = getattr(
@@ -664,6 +742,16 @@ def main() -> None:
         findings = getattr(compliance, "findings", [])
         print(f"Compliance  : {compliance_status}")
         print(f"Findings    : {len(findings)}")
+
+    if sole_source_check is None:
+        print("Sole Source : SKIPPED")
+    else:
+        risk = getattr(
+            sole_source_check.overall_risk_level,
+            "value",
+            sole_source_check.overall_risk_level,
+        )
+        print(f"Sole Source : risk={risk}, score={sole_source_check.overall_risk_score}")
 
     print(f"Decision    : {agent_h_result['decision']}")
     print(f"LLM used    : {agent_h_result['llm_used']}")
