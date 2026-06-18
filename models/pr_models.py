@@ -45,3 +45,4 @@ class ExtractedPR(BaseModel):
     extraction_method: ExtractionMethod
     overall_confidence: float = Field(ge=0.0, le=1.0)
     aggregation_notes: list[str] = Field(default_factory=list)
+    currency: str = "USD"  

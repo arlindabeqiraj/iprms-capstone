@@ -1,0 +1,10 @@
+bundle_id: PRBUNDLE011
+description: Split order anomaly scenario. Same department requests the same item in separate PRs close to the bid threshold.
+expected_decision: REQUIRES_APPROVAL
+requisition_file: requisition.json
+budget_file: budget_snapshot.csv
+vendor_file: approved_vendors.csv
+catalogue_file: catalogue_pricing.csv
+policy_file: approval_policy.yaml
+cost_center_file: cost_center_mapping.csv
+created_at: "2026-06-12T10:00:00"

@@ -148,5 +148,5 @@ def test_agent_h_generates_final_artifacts_for_vendor_exception():
     assert approval_packet["human_review_required"] is True
 
     po_draft = json.loads((run_dir / "po_draft.json").read_text())
-    assert po_draft["status"] == "BLOCKED"
+    assert po_draft["status"] == "PENDING_APPROVAL"
     assert po_draft["currency"] == "EUR"

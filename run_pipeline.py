@@ -11,6 +11,7 @@ from agents.agent_a_intake import run_intake
 from agents.agent_b_extraction import run as run_agent_b
 from agents.agent_c_budget import run_agent_c
 from agents.agent_d_vendor import run as run_agent_d
+from agents.agent_g_split_order_anomaly import run_agent_g
 from agents.agent_h_orchestrator import run_agent_h
 from services.file_loader import load_pr_bundle
 
@@ -574,6 +575,14 @@ def run_pipeline(
     )
 
     
+    print("Running Agent G - Split-Order and Anomaly Detection...")
+    anomaly_check = run_agent_g(
+        run_id=shared_run_id,
+        bundle_path=str(bundle_path),
+        audit_logger=audit_logger,
+        metrics_tracker=metrics_tracker,
+    )
+    print(f"OK Agent G completed - status: {anomaly_check.overall_status.value}")
 
     print("Running Agent H - Final Orchestration...")
     agent_h_result = run_agent_h(
@@ -612,6 +621,8 @@ def run_pipeline(
     else:
         print("  Agent F skipped - sole_source_check not produced")
 
+    print("  anomaly_check.json       -> Agent G")
+    print("  split_order_anomalies.md -> Agent G")
     print("  exceptions.md            -> Agent H")
     print("  approval_packet.json     -> Agent H")
     print("  po_draft.json            -> Agent H")
@@ -631,11 +642,14 @@ def run_pipeline(
         "budget_check": budget_check,
         "compliance": compliance,
         "sole_source_check": sole_source_check,
+        "anomaly_check": anomaly_check,
         "agent_h_result": agent_h_result,
         "context_packet_path": str(run_path / "context_packet.json"),
         "extracted_pr_path": str(run_path / "extracted_pr.json"),
         "budget_check_path": str(run_path / "budget_check.json"),
         "vendor_match_path": str(run_path / "vendor_match.json"),
+        "anomaly_check_path": str(run_path / "anomaly_check.json"),
+        "split_order_anomalies_path": str(run_path / "split_order_anomalies.md"),
         "exceptions_path": str(run_path / "exceptions.md"),
         "approval_packet_path": str(run_path / "approval_packet.json"),
         "po_draft_path": str(run_path / "po_draft.json"),
@@ -713,6 +727,7 @@ def main() -> None:
     budget_check = result["budget_check"]
     compliance = result["compliance"]
     sole_source_check = result["sole_source_check"]
+    anomaly_check = result["anomaly_check"]
     agent_h_result = result["agent_h_result"]
 
     budget_status = getattr(
@@ -752,6 +767,15 @@ def main() -> None:
             sole_source_check.overall_risk_level,
         )
         print(f"Sole Source : risk={risk}, score={sole_source_check.overall_risk_score}")
+
+    anomaly_status = getattr(
+        anomaly_check.overall_status,
+        "value",
+        anomaly_check.overall_status,
+    )
+
+    print(f"Anomaly     : {anomaly_status}")
+    print(f"Anomaly Findings: {len(anomaly_check.findings)}")
 
     print(f"Decision    : {agent_h_result['decision']}")
     print(f"LLM used    : {agent_h_result['llm_used']}")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -9,6 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+
+def _stable_id(prefix: str, text: str) -> str:
+    digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:8]
+    return f"{prefix}-{digest}"
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +32,10 @@ REQUIRED_ARTIFACTS = [
 OPTIONAL_POLICY_ARTIFACTS = [
     "policy_check.json",
     "compliance_findings.json",
+]
+
+OPTIONAL_ANOMALY_ARTIFACTS = [
+    "anomaly_check.json",
 ]
 
 
@@ -367,8 +376,11 @@ def _normalize_finding(raw: dict[str, Any], fallback_agent: str) -> dict[str, An
     finding_id = _safe_string(
         raw.get("finding_id")
         or raw.get("id")
-        or f"{fallback_agent.upper().replace(' ', '-')}-{abs(hash(description)) % 100000}"
+        or _stable_id(
+            fallback_agent.upper().replace(" ", "-"),
+            description,
     )
+)
 
     return {
         "finding_id": finding_id,
@@ -932,14 +944,23 @@ def _extract_currency(
     return "UNKNOWN"
 
 
+def _po_status_from_decision(decision: str) -> str:
+    mapping = {
+        "AUTO_APPROVE": "READY",
+        "REQUIRES_APPROVAL": "PENDING_APPROVAL",
+        "MANUAL_REVIEW": "UNDER_REVIEW",
+        "BLOCKED": "BLOCKED",
+    }
+
+    return mapping.get(decision, "UNDER_REVIEW")
+
 def _build_po_draft(
     run_id: str,
     decision: str,
     context_packet: dict[str, Any],
     extracted_pr: dict[str, Any],
 ) -> dict[str, Any]:
-    status = "READY" if decision == "AUTO_APPROVE" else "BLOCKED"
-
+    status = _po_status_from_decision(decision)
     requester = _safe_string(
         extracted_pr.get("requester")
         or context_packet.get("requester")
@@ -1045,19 +1066,29 @@ def _build_approval_packet(
     llm_explanation: dict[str, Any],
 ) -> dict[str, Any]:
     routes: list[dict[str, Any]] = []
+    seen_routes: set[tuple[str, int]] = set()
 
     if decision != "AUTO_APPROVE":
         for finding in findings:
             severity = _safe_string(finding.get("severity")).upper()
 
             if severity in {"BLOCK", "EXCEPTION", "WARNING"}:
+                role = _approval_role_for_finding(finding)
+                deadline_hours = 24 if severity == "BLOCK" else 48
+                route_key = (role, deadline_hours)
+
+                if route_key in seen_routes:
+                    continue
+
+                seen_routes.add(route_key)
+
                 routes.append(
                     {
-                        "approver_role": _approval_role_for_finding(finding),
+                        "approver_role": role,
                         "approver_name": None,
                         "reason": finding["description"],
                         "evidence_pointers": finding.get("evidence_pointers", []),
-                        "deadline_hours": 24 if severity == "BLOCK" else 48,
+                        "deadline_hours": deadline_hours,
                     }
                 )
 
@@ -1371,6 +1402,14 @@ def _load_all_artifacts(
             f"Policy artifact not found for run_id={run_id}"
         )
 
+    for filename in OPTIONAL_ANOMALY_ARTIFACTS:
+        anomaly_data = _read_json_if_exists(run_id, filename)
+
+        if anomaly_data is not None:
+            artifacts["anomaly_check"] = anomaly_data
+            loaded_files.append(filename)
+            break
+
     return artifacts, loaded_files
 
 
@@ -1380,6 +1419,7 @@ def _collect_all_findings(
     budget_check: dict[str, Any],
     vendor_match: dict[str, Any],
     policy_check: dict[str, Any] | None,
+    anomaly_check: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
 
@@ -1392,6 +1432,9 @@ def _collect_all_findings(
 
     if policy_check is not None:
         findings.extend(_collect_findings_recursive(policy_check, "Agent E"))
+
+    if anomaly_check is not None:
+        findings.extend(_collect_findings_recursive(anomaly_check, "Agent G"))
 
     findings.extend(_derive_budget_findings(budget_check))
     findings.extend(_derive_vendor_findings(vendor_match))
@@ -1455,6 +1498,7 @@ def run_agent_h(
         budget_check = artifacts["budget_check"]
         vendor_match = artifacts["vendor_match"]
         policy_check = artifacts.get("policy_check")
+        anomaly_check = artifacts.get("anomaly_check")
 
         findings = _collect_all_findings(
             context_packet=context_packet,
@@ -1462,6 +1506,7 @@ def run_agent_h(
             budget_check=budget_check,
             vendor_match=vendor_match,
             policy_check=policy_check,
+            anomaly_check=anomaly_check,
         )
 
         decision = _decide(findings)

@@ -1,0 +1,64 @@
+{
+    "run_id": "sample_run_prbundle011",
+    "pr_id": "PR011",
+    "currency": "EUR",
+    "header": {
+      "pr_number": "PR011",
+      "request_date": "2026-06-12T10:00:00",
+      "required_by": "2026-06-20T17:00:00",
+      "requester": "Alex Taylor",
+      "department": "IT",
+      "cost_center": "CC100",
+      "justification": "Laptop refresh for onboarding and contractor setup."
+    },
+    "line_items": [
+      {
+        "line_number": 1,
+        "item_name": "Dell Latitude Laptop",
+        "quantity": 2,
+        "unit_price": 1400,
+        "total_price": 2800,
+        "cost_center": "CC100",
+        "gl_account": "IT-EQUIPMENT",
+        "requested_vendor": "Dell Official Partner",
+        "confidence": 0.96,
+        "evidence_pointers": [
+          {
+            "source_file": "requisition.json",
+            "page_number": 1,
+            "field_name": "line_items[0]",
+            "bounding_box": null
+          }
+        ],
+        "is_ambiguous": false,
+        "ambiguity_reason": null
+      },
+      {
+        "line_number": 2,
+        "item_name": "Dell Latitude Laptop",
+        "quantity": 2,
+        "unit_price": 1400,
+        "total_price": 2800,
+        "cost_center": "CC100",
+        "gl_account": "IT-EQUIPMENT",
+        "requested_vendor": "Dell Official Partner",
+        "confidence": 0.96,
+        "evidence_pointers": [
+          {
+            "source_file": "requisition.json",
+            "page_number": 1,
+            "field_name": "line_items[1]",
+            "bounding_box": null
+          }
+        ],
+        "is_ambiguous": false,
+        "ambiguity_reason": null
+      }
+    ],
+    "total_value": 5600,
+    "extraction_method": "SYNTHETIC_FALLBACK",
+    "overall_confidence": 0.96,
+    "aggregation_notes": [
+      "Synthetic PR bundle used for split-order anomaly test scenario."
+    ]
+  }
