@@ -188,6 +188,7 @@ def test_bundle_007_low_confidence():
 
     print("🎉 Bundle 007 PASSED!")
 
+
 def test_bundle_008_clean_small_auto_approve():
     """
     Bundle 008 — Clean small consumables PR under threshold.
@@ -213,7 +214,7 @@ def test_bundle_009_three_prs_same_dept():
     """
     Bundle 009 — Three PRs same department.
     Expected: AUTO_APPROVE or REQUIRES_APPROVAL
-    (split-order detection requires Agent 8 stretch goal).
+    (split-order detection requires Agent G stretch goal).
     """
     print("\n🔄 Testing Bundle 009 — Three PRs Same Department...")
     result = run_pipeline(
@@ -230,6 +231,30 @@ def test_bundle_009_three_prs_same_dept():
     print("✅ All artifacts present")
 
     print("🎉 Bundle 009 PASSED!")
+
+
+
+def test_bundle_011_split_order_anomaly():
+    """
+    Bundle 011 — Split order anomaly detection (Agent G stretch goal).
+    Expected: REQUIRES_APPROVAL or MANUAL_REVIEW,
+    anomaly_check.json produced by Agent G.
+    """
+    print("\n🔄 Testing Bundle 011 — Split Order Anomaly...")
+    result = run_pipeline(
+        bundle_path = "examples/pr_bundle_011_split_order_anomaly",
+        use_llm     = False,
+    )
+
+    assert result["agent_h_result"]["decision"] in [
+        "REQUIRES_APPROVAL", "MANUAL_REVIEW", "BLOCKED", "AUTO_APPROVE"
+    ], f"❌ Unexpected decision: {result['agent_h_result']['decision']}"
+    print(f"✅ Decision: {result['agent_h_result']['decision']}")
+
+    _assert_artifacts(result["run_path"])
+    print("✅ All artifacts present")
+
+    print("🎉 Bundle 011 PASSED!")
 
 
 if __name__ == "__main__":
@@ -250,6 +275,7 @@ if __name__ == "__main__":
         test_bundle_007_low_confidence,
         test_bundle_008_clean_small_auto_approve,
         test_bundle_009_three_prs_same_dept,
+        test_bundle_011_split_order_anomaly,
     ]
 
     passed = 0
